@@ -1,0 +1,283 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>지도 뷰어 (HTML/JS Only)</title>
+    <style>
+    html, body { margin: 0; padding: 0; overflow: hidden; }
+        #map {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            width: 100vw; height: 100vh;
+            background: #eee;
+            overflow: hidden;
+        }
+        .toolbar {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255,255,255,0.9);
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 8px 12px;
+            z-index: 10;
+        }
+        .toolbar select, .toolbar button {
+            margin-right: 8px;
+        }
+        .info {
+            position: absolute;
+            top: 70px;
+            left: 10px;
+            background: rgba(255,255,255,0.95);
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            padding: 8px 12px;
+            z-index: 9;
+            font-size: 14px;
+        }
+        .quick-move {
+            position: absolute;
+            top: 140px;
+            left: 10px;
+            background: rgba(255,255,255,0.95);
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            padding: 8px 12px;
+            z-index: 8;
+            font-size: 14px;
+        }
+        .quick-move button {
+            margin: 2px 4px;
+        }
+        .help {
+            position: absolute;
+            top: 220px;
+            left: 10px;
+            background: rgba(255,255,255,0.95);
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            padding: 8px 12px;
+            z-index: 7;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <label for="type">타입:</label>
+    <select id="type"></select>
+        <label for="zoom">Zoom:</label>
+        <input type="number" id="zoom" min="1" max="19" value="12" style="width:40px;">
+        <button onclick="reloadTiles()">새로고침</button>
+    </div>
+    <div class="info" id="info"></div>
+    <div class="quick-move">
+        <button onclick="moveTo(37.5665,126.9780,15)">서울시청</button>
+        <button onclick="moveTo(35.1796,129.0756,15)">부산시청</button>
+        <button onclick="moveTo(36.906984,127.532255,17)">기본 위치</button>
+        <button onclick="moveTo(33.4996,126.5312,15)">제주시청</button>
+    </div>
+    <div class="help">
+        <b>조작 방법</b><br>
+        <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> 지도 이동<br>
+        <kbd>+</kbd> <kbd>-</kbd> 줌 조절<br>
+        <kbd>마우스 휠</kbd> 줌 조절<br>
+        <kbd>타일 클릭</kbd> 해당 위치로 중심 이동<br>
+        <kbd>1</kbd>~<kbd>7</kbd> 지도 타입 변경<br>
+    </div>
+    <div id="map"></div>
+    <script>
+        // Google 지도 7종 타입 정의
+        const mapTypes = [
+            { key: 1, name: 'roads only', url: 'https://mt1.google.com/vt/lyrs=h&x={x}&y={y}&z={z}' },
+            { key: 2, name: 'standard roadmap', url: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}' },
+            { key: 3, name: 'terrain', url: 'https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}' },
+            { key: 4, name: 'somehow altered roadmap', url: 'https://mt1.google.com/vt/lyrs=r&x={x}&y={y}&z={z}' },
+            { key: 5, name: 'satellite only', url: 'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}' },
+            { key: 6, name: 'terrain only', url: 'https://mt1.google.com/vt/lyrs=t&x={x}&y={y}&z={z}' },
+            { key: 7, name: 'hybrid', url: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}' }
+        ];
+
+        let center = { lat: 37.5665, lng: 126.9780 };
+        let zoom = 12;
+        let type = 2; // 기본 standard roadmap
+        const tileSize = 256;
+        // 중심 타일 좌표
+        let centerTile = null;
+
+        // 줌 1일 때 중심 타일을 (0,0)으로 맞추기 위한 함수
+        function setCenterForZoom1() {
+            if (zoom === 1) {
+                centerTile = { x: 0, y: 0 };
+                center = tileToLngLat(0, 0, 1);
+            }
+        }
+
+        // 지도 타입 셀렉트 옵션 동적 생성
+        const typeSelect = document.getElementById('type');
+        mapTypes.forEach(mt => {
+            const opt = document.createElement('option');
+            opt.value = mt.key;
+            opt.textContent = mt.name;
+            typeSelect.appendChild(opt);
+        });
+        typeSelect.value = type;
+        typeSelect.addEventListener('change', function(e) {
+            type = parseInt(e.target.value);
+            reloadTiles();
+        });
+        document.getElementById('zoom').addEventListener('change', function(e) {
+            zoom = parseInt(e.target.value);
+            reloadTiles();
+        });
+
+        function lngLatToTile(lng, lat, zoom) {
+            const x = Math.floor((lng + 180) / 360 * Math.pow(2, zoom));
+            const y = Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, zoom));
+            return { x, y };
+        }
+        function tileToLngLat(x, y, zoom) {
+            const n = Math.pow(2, zoom);
+            const lng = x / n * 360.0 - 180.0;
+            const lat_rad = Math.atan(Math.sinh(Math.PI * (1 - 2 * y / n)));
+            const lat = lat_rad * 180.0 / Math.PI;
+            return { lat, lng };
+        }
+
+
+        function drawTiles() {
+            const mapDiv = document.getElementById('map');
+            mapDiv.innerHTML = '';
+            const { x, y } = lngLatToTile(center.lng, center.lat, zoom);
+            centerTile = { x, y };
+            const typeObj = mapTypes.find(mt => mt.key === type);
+            // 화면 크기에 맞춰 타일 개수 계산
+            const tilesX = Math.ceil(window.innerWidth / tileSize) + 2;
+            const tilesY = Math.ceil(window.innerHeight / tileSize) + 2;
+            let offsetX = Math.floor(tilesX / 2);
+            let offsetY = Math.floor(tilesY / 2);
+            // 줌 1일 때는 (0,0) 타일만 화면 중앙에 크게 표시
+            if (zoom === 1 && centerTile.x === 0 && centerTile.y === 0) {
+                const url = typeObj.url.replace('{z}', 1).replace('{x}', 0).replace('{y}', 0);
+                const img = document.createElement('img');
+                img.src = url;
+                img.style.position = 'absolute';
+                img.style.left = '50%';
+                img.style.top = '50%';
+                img.style.transform = 'translate(-50%, -50%)';
+                // 화면 비율에 맞게 타일 크기와 위치를 중앙에 맞춤
+                const screenRatio = window.innerWidth / window.innerHeight;
+                if (screenRatio > 1) {
+                    // 가로가 더 넓을 때: 세로를 기준으로 타일 크기 맞춤
+                    img.height = window.innerHeight;
+                    img.width = window.innerHeight;
+                } else {
+                    // 세로가 더 넓을 때: 가로를 기준으로 타일 크기 맞춤
+                    img.width = window.innerWidth;
+                    img.height = window.innerWidth;
+                }
+                img.alt = '0,0';
+                img.style.cursor = 'pointer';
+                img.style.boxSizing = 'border-box';
+                img.style.border = '2px solid #007bff';
+                img.addEventListener('click', function() {
+                    centerTile = { x: 0, y: 0 };
+                    center = tileToLngLat(0, 0, 1);
+                    reloadTiles();
+                });
+                mapDiv.appendChild(img);
+            } else {
+                const centerLeft = window.innerWidth / 2 - tileSize / 2;
+                const centerTop = window.innerHeight / 2 - tileSize / 2;
+                for (let dx = -offsetX; dx <= offsetX; dx++) {
+                    for (let dy = -offsetY; dy <= offsetY; dy++) {
+                        const tx = centerTile.x + dx;
+                        const ty = centerTile.y + dy;
+                        const url = typeObj.url
+                            .replace('{z}', zoom)
+                            .replace('{x}', tx)
+                            .replace('{y}', ty);
+                        const img = document.createElement('img');
+                        img.src = url;
+                        img.style.position = 'absolute';
+                        img.style.left = `${centerLeft + dx * tileSize}px`;
+                        img.style.top = `${centerTop + dy * tileSize}px`;
+                        img.width = tileSize;
+                        img.height = tileSize;
+                        img.alt = `${tx},${ty}`;
+                        img.style.cursor = 'pointer';
+                        img.style.boxSizing = 'border-box';
+                        img.style.border = (dx === 0 && dy === 0)
+                            ? '2px solid #007bff'
+                            : '1px solid #bbb';
+                        img.addEventListener('click', function() {
+                            centerTile = { x: tx, y: ty };
+                            center = tileToLngLat(tx, ty, zoom);
+                            reloadTiles();
+                        });
+                        mapDiv.appendChild(img);
+                    }
+                }
+            }
+            mapDiv.style.position = 'fixed';
+            mapDiv.style.top = '0';
+            mapDiv.style.left = '0';
+            mapDiv.style.width = '100vw';
+            mapDiv.style.height = '100vh';
+            mapDiv.style.margin = '0';
+            mapDiv.style.transform = 'none';
+
+            // 정보 표시
+            document.getElementById('info').innerHTML =
+                `<b>중심 좌표:</b> ${center.lat.toFixed(6)}, ${center.lng.toFixed(6)} | <b>줌:</b> ${zoom} | <b>타입:</b> ${typeObj.name} | <b>타일:</b> x=${centerTile.x}, y=${centerTile.y}`;
+        }
+
+        function reloadTiles() {
+            document.getElementById('zoom').value = zoom;
+            document.getElementById('type').value = type;
+            setCenterForZoom1();
+            drawTiles();
+        }
+
+        function moveTo(lat, lng, z) {
+            center = { lat, lng };
+            zoom = z;
+            reloadTiles();
+        }
+
+        // 키보드 이동/줌/타입 변경
+        document.addEventListener('keydown', function (event) {
+            if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT') return;
+            let moved = false;
+            switch (event.key) {
+                case 'ArrowUp': centerTile.y -= 1; center = tileToLngLat(centerTile.x, centerTile.y, zoom); moved = true; break;
+                case 'ArrowDown': centerTile.y += 1; center = tileToLngLat(centerTile.x, centerTile.y, zoom); moved = true; break;
+                case 'ArrowLeft': centerTile.x -= 1; center = tileToLngLat(centerTile.x, centerTile.y, zoom); moved = true; break;
+                case 'ArrowRight': centerTile.x += 1; center = tileToLngLat(centerTile.x, centerTile.y, zoom); moved = true; break;
+                case '+': case '=': if (zoom < 19) { zoom++; moved = true; } break;
+                case '-': if (zoom > 1) { zoom--; moved = true; } break;
+                case '1': type = 1; moved = true; break;
+                case '2': type = 2; moved = true; break;
+                case '3': type = 3; moved = true; break;
+                case '4': type = 4; moved = true; break;
+                case '5': type = 5; moved = true; break;
+                case '6': type = 6; moved = true; break;
+                case '7': type = 7; moved = true; break;
+            }
+            if (moved) reloadTiles();
+        });
+
+        // 마우스 휠로 줌 조절
+        document.getElementById('map').addEventListener('wheel', function(event) {
+            event.preventDefault();
+            if (event.deltaY < 0 && zoom < 19) { zoom++; reloadTiles(); }
+            else if (event.deltaY > 0 && zoom > 1) { zoom--; reloadTiles(); }
+        });
+
+        window.onload = reloadTiles;
+    </script>
+</body>
+</html>
