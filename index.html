@@ -1,78 +1,96 @@
-
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>지도 뷰어 (HTML/JS Only)</title>
-        <link rel="stylesheet"
+    <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/github-fork-ribbon-css/0.2.3/gh-fork-ribbon.min.css" />
     <style>
-    html, body { margin: 0; padding: 0; overflow: hidden; }
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
         #map {
             position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            width: 100vw; height: 100vh;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100vw;
+            height: 100vh;
             background: #eee;
             overflow: hidden;
         }
+
         .toolbar {
             position: absolute;
             top: 10px;
             left: 10px;
-            background: rgba(255,255,255,0.9);
+            background: rgba(255, 255, 255, 0.9);
             border-radius: 6px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
             padding: 8px 12px;
             z-index: 10;
         }
-        .toolbar select, .toolbar button {
+
+        .toolbar select,
+        .toolbar button {
             margin-right: 8px;
         }
+
         .info {
             position: absolute;
             top: 70px;
             left: 10px;
-            background: rgba(255,255,255,0.95);
+            background: rgba(255, 255, 255, 0.95);
             border-radius: 6px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
             padding: 8px 12px;
             z-index: 9;
             font-size: 14px;
         }
+
         .quick-move {
             position: absolute;
             top: 140px;
             left: 10px;
-            background: rgba(255,255,255,0.95);
+            background: rgba(255, 255, 255, 0.95);
             border-radius: 6px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
             padding: 8px 12px;
             z-index: 8;
             font-size: 14px;
         }
+
         .quick-move button {
             margin: 2px 4px;
         }
+
         .help {
             position: absolute;
             top: 220px;
             left: 10px;
-            background: rgba(255,255,255,0.95);
+            background: rgba(255, 255, 255, 0.95);
             border-radius: 6px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
             padding: 8px 12px;
             z-index: 7;
             font-size: 13px;
         }
     </style>
 </head>
+
 <body>
-        <a class="github-fork-ribbon right-top" href="https://github.com/bluetsys/onlyhtmlmap"
+    <a class="github-fork-ribbon right-top" href="https://github.com/bluetsys/onlyhtmlmap"
         data-ribbon="Fork me on GitHub" title="Fork me on GitHub" target="_blank">Fork me on GitHub</a>
     <div class="toolbar">
         <label for="type">타입:</label>
-    <select id="type"></select>
+        <select id="type"></select>
         <label for="zoom">Zoom:</label>
         <input type="number" id="zoom" min="1" max="19" value="12" style="width:40px;">
         <button onclick="reloadTiles()">새로고침</button>
@@ -109,14 +127,12 @@
         let zoom = 12;
         let type = 2; // 기본 standard roadmap
         const tileSize = 256;
-        // 중심 타일 좌표
-        let centerTile = null;
+        let centerTile = { x: 3493, y: 1590 };
 
         // 줌 1일 때 중심 타일을 (0,0)으로 맞추기 위한 함수
         function setCenterForZoom1() {
             if (zoom === 1) {
                 centerTile = { x: 0, y: 0 };
-                center = tileToLngLat(0, 0, 1);
             }
         }
 
@@ -129,11 +145,11 @@
             typeSelect.appendChild(opt);
         });
         typeSelect.value = type;
-        typeSelect.addEventListener('change', function(e) {
+        typeSelect.addEventListener('change', function (e) {
             type = parseInt(e.target.value);
             reloadTiles();
         });
-        document.getElementById('zoom').addEventListener('change', function(e) {
+        document.getElementById('zoom').addEventListener('change', function (e) {
             zoom = parseInt(e.target.value);
             reloadTiles();
         });
@@ -151,12 +167,9 @@
             return { lat, lng };
         }
 
-
         function drawTiles() {
             const mapDiv = document.getElementById('map');
             mapDiv.innerHTML = '';
-            const { x, y } = lngLatToTile(center.lng, center.lat, zoom);
-            centerTile = { x, y };
             const typeObj = mapTypes.find(mt => mt.key === type);
             // 화면 크기에 맞춰 타일 개수 계산
             const tilesX = Math.ceil(window.innerWidth / tileSize) + 2;
@@ -187,9 +200,8 @@
                 img.style.cursor = 'pointer';
                 img.style.boxSizing = 'border-box';
                 img.style.border = '2px solid #007bff';
-                img.addEventListener('click', function() {
+                img.addEventListener('click', function () {
                     centerTile = { x: 0, y: 0 };
-                    center = tileToLngLat(0, 0, 1);
                     reloadTiles();
                 });
                 mapDiv.appendChild(img);
@@ -217,9 +229,8 @@
                         img.style.border = (dx === 0 && dy === 0)
                             ? '2px solid #007bff'
                             : '1px solid #bbb';
-                        img.addEventListener('click', function() {
+                        img.addEventListener('click', function () {
                             centerTile = { x: tx, y: ty };
-                            center = tileToLngLat(tx, ty, zoom);
                             reloadTiles();
                         });
                         mapDiv.appendChild(img);
@@ -234,7 +245,8 @@
             mapDiv.style.margin = '0';
             mapDiv.style.transform = 'none';
 
-            // 정보 표시
+            // 중심 좌표 갱신
+            center = tileToLngLat(centerTile.x, centerTile.y, zoom);
             document.getElementById('info').innerHTML =
                 `<b>중심 좌표:</b> ${center.lat.toFixed(6)}, ${center.lng.toFixed(6)} | <b>줌:</b> ${zoom} | <b>타입:</b> ${typeObj.name} | <b>타일:</b> x=${centerTile.x}, y=${centerTile.y}`;
         }
@@ -243,11 +255,21 @@
             document.getElementById('zoom').value = zoom;
             document.getElementById('type').value = type;
             setCenterForZoom1();
+            // zoom 변경 시 중심 경도/위도를 유지
+            if (typeof reloadTiles.lastZoom === 'undefined') reloadTiles.lastZoom = zoom;
+            if (zoom !== reloadTiles.lastZoom) {
+                // 1. 기존 중심 타일의 경도/위도 저장
+                const prevZoom = reloadTiles.lastZoom;
+                const centerLatLng = tileToLngLat(centerTile.x, centerTile.y, prevZoom);
+                // 2. zoom 변경 후 해당 경도/위도에 맞는 타일 좌표로 재계산
+                centerTile = lngLatToTile(centerLatLng.lng, centerLatLng.lat, zoom);
+                reloadTiles.lastZoom = zoom;
+            }
             drawTiles();
         }
 
-        function moveTo(lat, lng, z) {
-            center = { lat, lng };
+        function moveTo(x, y, z) {
+            centerTile = { x, y };
             zoom = z;
             reloadTiles();
         }
@@ -257,10 +279,10 @@
             if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT') return;
             let moved = false;
             switch (event.key) {
-                case 'ArrowUp': centerTile.y -= 1; center = tileToLngLat(centerTile.x, centerTile.y, zoom); moved = true; break;
-                case 'ArrowDown': centerTile.y += 1; center = tileToLngLat(centerTile.x, centerTile.y, zoom); moved = true; break;
-                case 'ArrowLeft': centerTile.x -= 1; center = tileToLngLat(centerTile.x, centerTile.y, zoom); moved = true; break;
-                case 'ArrowRight': centerTile.x += 1; center = tileToLngLat(centerTile.x, centerTile.y, zoom); moved = true; break;
+                case 'ArrowUp': centerTile.y -= 1; moved = true; break;
+                case 'ArrowDown': centerTile.y += 1; moved = true; break;
+                case 'ArrowLeft': centerTile.x -= 1; moved = true; break;
+                case 'ArrowRight': centerTile.x += 1; moved = true; break;
                 case '+': case '=': if (zoom < 19) { zoom++; moved = true; } break;
                 case '-': if (zoom > 1) { zoom--; moved = true; } break;
                 case '1': type = 1; moved = true; break;
@@ -275,7 +297,7 @@
         });
 
         // 마우스 휠로 줌 조절
-        document.getElementById('map').addEventListener('wheel', function(event) {
+        document.getElementById('map').addEventListener('wheel', function (event) {
             event.preventDefault();
             if (event.deltaY < 0 && zoom < 19) { zoom++; reloadTiles(); }
             else if (event.deltaY > 0 && zoom > 1) { zoom--; reloadTiles(); }
@@ -283,6 +305,26 @@
 
         window.onload = reloadTiles;
     </script>
+    <script type="text/javascript">
+        var sc_project = 13139524;
+        var sc_invisible = 1;
+        var sc_security = "83232f9f"; 
+    </script>
+    <script type="text/javascript" src="https://www.statcounter.com/counter/counter.js" async></script>
+    <noscript>
+        <div class="statcounter"><a title="Web Analytics" href="https://statcounter.com/" target="_blank"><img
+                    class="statcounter" src="https://c.statcounter.com/13139524/0/83232f9f/1/" alt="Web Analytics"
+                    referrerPolicy="no-referrer-when-downgrade"></a></div>
+    </noscript>
+    <!-- End of Statcounter Code -->
+    <script type="text/javascript" src="//wcs.naver.net/wcslog.js"></script>
+    <script type="text/javascript">
+        if (!wcs_add) var wcs_add = {};
+        wcs_add["wa"] = "14cd277c95fd60";
+        if (window.wcs) {
+            wcs_do();
+        }
+    </script>
 </body>
-</html>
 
+</html>
