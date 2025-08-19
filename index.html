@@ -122,12 +122,12 @@
             { key: 7, name: 'hybrid', url: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}' },
         ];
         const mapTypeVworld = [
-            { key: 1, name: 'Base', url: 'https://xdworld.vworld.kr:8080/2d/Base/201710/{z}/{x}/{y}.png' },
-            { key: 2, name: 'midnight', url: 'https://xdworld.vworld.kr:8080/2d/midnight/201710/{z}/{x}/{y}.png' },
-            { key: 3, name: 'Hybrid', url: 'https://xdworld.vworld.kr:8080/2d/Hybrid/201710/{z}/{x}/{y}.png' },
-            { key: 4, name: 'Satellite', url: 'https://xdworld.vworld.kr:8080/2d/Satellite/201710/{z}/{x}/{y}.jpeg' }
+            { key: 1, name: 'Base', url: 'http://xdworld.vworld.kr:8080/2d/Base/201710/{z}/{x}/{y}.png' },
+            { key: 2, name: 'midnight', url: 'http://xdworld.vworld.kr:8080/2d/midnight/201710/{z}/{x}/{y}.png' },
+            { key: 3, name: 'Hybrid', url: 'http://xdworld.vworld.kr:8080/2d/Hybrid/201710/{z}/{x}/{y}.png' },
+            { key: 4, name: 'Satellite', url: 'http://xdworld.vworld.kr:8080/2d/Satellite/201710/{z}/{x}/{y}.jpeg' }
         ];
-        let mapTypes = mapTypeVworld;
+        let mapTypes = mapTypeGoogle;
         let mapTypeIdx = 2; // 기본 standard roadmap
         const tileSize = 256;
         let zoom = 12;
