@@ -104,6 +104,7 @@
         <span class="help-key">마우스 휠</span> 줌 조절<br>
         <span class="help-key">타일 드레그</span> 해당 위치로 중심 이동<br>
         <span class="help-key">1</span>~<span class="help-key">7</span> 지도 타입 변경
+        <span class="help-key">9</span> 지도 변경 (구글/브이월드)<br>
     </div>
     <a class="github-fork-ribbon right-top" href="https://github.com/bluetsys/onlyhtmlmap"
         data-ribbon="Fork me on GitHub" title="Fork me on GitHub" target="_blank">Fork me on GitHub</a>
@@ -111,15 +112,22 @@
     <div id="info-bar"></div>
     <script>
         const mapDiv = document.getElementById('map');
-        const mapTypes = [
-            { key: 1, name: 'roads only', url: 'https://mt1.google.com/vt/lyrs=h&x={x}&y={y}&z={z}' },
-            { key: 2, name: 'standard roadmap', url: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}' },
+        const mapTypeGoogle = [
+            { key: 1, name: 'standard roadmap', url: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}' },
+            { key: 2, name: 'roads only', url: 'https://mt1.google.com/vt/lyrs=h&x={x}&y={y}&z={z}' },
             { key: 3, name: 'terrain', url: 'https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}' },
             { key: 4, name: 'somehow altered roadmap', url: 'https://mt1.google.com/vt/lyrs=r&x={x}&y={y}&z={z}' },
             { key: 5, name: 'satellite only', url: 'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}' },
             { key: 6, name: 'terrain only', url: 'https://mt1.google.com/vt/lyrs=t&x={x}&y={y}&z={z}' },
-            { key: 7, name: 'hybrid', url: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}' }
+            { key: 7, name: 'hybrid', url: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}' },
         ];
+        const mapTypeVworld = [
+            { key: 1, name: 'Base', url: 'http://xdworld.vworld.kr:8080/2d/Base/201710/{z}/{x}/{y}.png' },
+            { key: 2, name: 'midnight', url: 'http://xdworld.vworld.kr:8080/2d/midnight/201710/{z}/{x}/{y}.png' },
+            { key: 3, name: 'Hybrid', url: 'http://xdworld.vworld.kr:8080/2d/Hybrid/201710/{z}/{x}/{y}.png' },
+            { key: 4, name: 'Satellite', url: 'http://xdworld.vworld.kr:8080/2d/Satellite/201710/{z}/{x}/{y}.jpeg' }
+        ];
+        let mapTypes = mapTypeVworld;
         let mapTypeIdx = 2; // 기본 standard roadmap
         const tileSize = 256;
         let zoom = 12;
@@ -282,7 +290,26 @@
                 case '5':
                 case '6':
                 case '7':
-                    mapTypeIdx = parseInt(e.key);
+                    idx = parseInt(e.key);
+                    if (mapTypes.length < idx) {
+                        break;
+                    }
+                    mapTypeIdx = idx;
+                    reloadTiles();
+                    break;
+                case '9':
+                    console.log(mapTypes.length);
+                    if (mapTypes.length === 4) {
+                        console.log('Google Map 타입으로 변경');
+                        mapTypes = mapTypeGoogle;
+
+                        mapTypeIdx = 1;
+                    }
+                    else {
+                        console.log('Vworld Map 타입으로 변경');
+                        mapTypes = mapTypeVworld;
+                        mapTypeIdx = 1;
+                    }
                     reloadTiles();
                     break;
             }
