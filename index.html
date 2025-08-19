@@ -127,7 +127,13 @@
             { key: 3, name: 'Hybrid', url: 'http://xdworld.vworld.kr:8080/2d/Hybrid/201710/{z}/{x}/{y}.png' },
             { key: 4, name: 'Satellite', url: 'http://xdworld.vworld.kr:8080/2d/Satellite/201710/{z}/{x}/{y}.jpeg' }
         ];
-        let mapTypes = mapTypeGoogle;
+        const mapTypeKakao = [
+            { key: 1, name: 'Base', url: 'http://xdworld.vworld.kr:8080/2d/Base/201710/{z}/{x}/{y}.png' },
+            { key: 2, name: 'midnight', url: 'https://map.pstatic.net/nrb/styles/basic/1676618181/{z}/{x}/{y}@2x.png?mt=bg.ol.sw' },
+            { key: 3, name: 'Hybrid', url: 'http://xdworld.vworld.kr:8080/2d/Hybrid/201710/{z}/{x}/{y}.png' },
+            { key: 4, name: 'Satellite', url: 'http://xdworld.vworld.kr:8080/2d/Satellite/201710/{z}/{x}/{y}.jpeg' }
+        ];
+        let mapTypes = mapTypeVworld;
         let mapTypeIdx = 2; // 기본 standard roadmap
         const tileSize = 256;
         let zoom = 12;
@@ -222,6 +228,7 @@
             }
             if (!mapDiv._dragEventsAdded) {
                 mapDiv._dragEventsAdded = true;
+                // 마우스 드래그
                 mapDiv.addEventListener('mousedown', function (e) {
                     window._mapDragState.isDragging = true;
                     window._mapDragState.dragStartX = e.clientX;
@@ -257,6 +264,32 @@
                     }
                 });
                 mapDiv.style.cursor = 'grab';
+
+                // 터치 드래그(모바일)
+                mapDiv.addEventListener('touchstart', function (e) {
+                    if (e.touches.length !== 1) return;
+                    const touch = e.touches[0];
+                    window._mapDragState.isDragging = true;
+                    window._mapDragState.dragStartX = touch.clientX;
+                    window._mapDragState.dragStartY = touch.clientY;
+                    window._mapDragState.dragOriginPx = latLngToPixel(center.lat, center.lng, zoom);
+                }, { passive: false });
+                mapDiv.addEventListener('touchmove', function (e) {
+                    if (!window._mapDragState.isDragging || e.touches.length !== 1) return;
+                    e.preventDefault();
+                    const touch = e.touches[0];
+                    const dx = touch.clientX - window._mapDragState.dragStartX;
+                    const dy = touch.clientY - window._mapDragState.dragStartY;
+                    const newPx = window._mapDragState.dragOriginPx.x - dx;
+                    const newPy = window._mapDragState.dragOriginPx.y - dy;
+                    const newCenter = pixelToLatLng(newPx, newPy, zoom);
+                    center.lat = newCenter.lat;
+                    center.lng = newCenter.lng;
+                    drawTiles();
+                }, { passive: false });
+                mapDiv.addEventListener('touchend', function (e) {
+                    window._mapDragState.isDragging = false;
+                });
             }
 
             const infoBar = document.getElementById('info-bar');
